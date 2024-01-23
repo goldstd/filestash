@@ -3,18 +3,16 @@ package model
 import (
 	"database/sql"
 	. "github.com/mickael-kerjean/filestash/server/common"
+	"github.com/mitchellh/go-homedir"
 	_ "modernc.org/sqlite"
-	"os"
 	"time"
 )
 
 var DB *sql.DB
 
 func init() {
-	cachePath := GetAbsolutePath(DB_PATH)
-	os.MkdirAll(cachePath, os.ModePerm)
-	var err error
-	if DB, err = sql.Open("sqlite", cachePath+"/share.sql?_fk=true"); err != nil {
+	expanded, err := homedir.Expand("~/.brg.share.sql")
+	if DB, err = sql.Open("sqlite", expanded+"?_fk=true"); err != nil {
 		Log.Error("model::index sqlite open error '%s'", err.Error())
 		return
 	}

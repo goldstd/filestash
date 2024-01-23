@@ -8,7 +8,6 @@ import (
 	"hash/fnv"
 	"io"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -31,9 +30,10 @@ var (
 	ZipTimeout func() int
 )
 
+var cachePath, _ = os.MkdirTemp("", "")
+
 func init() {
 	FileCache = NewAppCache()
-	cachePath := GetAbsolutePath(TMP_PATH)
 	FileCache.OnEvict(func(key string, value interface{}) {
 		os.RemoveAll(filepath.Join(cachePath, key))
 	})
@@ -77,7 +77,7 @@ func FileLs(ctx *App, res http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	var perms Metadata = Metadata{}
+	var perms = Metadata{}
 	if obj, ok := ctx.Backend.(interface{ Meta(path string) Metadata }); ok {
 		perms = obj.Meta(path)
 	}
@@ -141,10 +141,10 @@ func FileLs(ctx *App, res http.ResponseWriter, req *http.Request) {
 func FileCat(ctx *App, res http.ResponseWriter, req *http.Request) {
 	var (
 		file              io.ReadCloser
-		contentLength     int64       = -1
-		needToCreateCache bool        = false
-		query             url.Values  = req.URL.Query()
-		header            http.Header = res.Header()
+		contentLength     int64 = -1
+		needToCreateCache       = false
+		query                   = req.URL.Query()
+		header                  = res.Header()
 	)
 	http.SetCookie(res, &http.Cookie{
 		Name:   "download",
@@ -238,7 +238,7 @@ func FileCat(ctx *App, res http.ResponseWriter, req *http.Request) {
 				}
 			}
 		} else {
-			tmpPath := GetAbsolutePath(TMP_PATH, "file_"+QuickString(20)+".dat")
+			tmpPath := GetAbsolutePath(cachePath, "file_"+QuickString(20)+".dat")
 			f, err := os.OpenFile(tmpPath, os.O_RDWR|os.O_CREATE, os.ModePerm)
 			if err != nil {
 				Log.Debug("cat::range0 '%s'", err.Error())

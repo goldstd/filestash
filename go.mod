@@ -5,13 +5,12 @@ go 1.20
 require (
 	github.com/aws/aws-sdk-go v1.50.1
 	github.com/creack/pty v1.1.21
-	github.com/cretz/bine v0.2.0
 	github.com/go-sql-driver/mysql v1.7.1
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.1
 	github.com/h2non/bimg v1.1.9
 	github.com/hirochachacha/go-smb2 v1.1.0
-	github.com/mattn/go-sqlite3 v1.14.19
+	github.com/mattn/go-sqlite3 v1.14.19 // indirect
 	github.com/mickael-kerjean/net v0.0.0-20191120063050-2457c043ba06
 	github.com/mitchellh/hashstructure v1.1.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
@@ -40,6 +39,8 @@ require (
 	modernc.org/sqlite v1.28.0
 )
 
+require github.com/mitchellh/go-homedir v1.1.0
+
 require (
 	cloud.google.com/go/compute v1.23.3 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
@@ -64,7 +65,6 @@ require (
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/kr/pretty v0.3.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect

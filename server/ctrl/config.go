@@ -6,8 +6,6 @@ import (
 	"net/http"
 )
 
-var configpath = GetAbsolutePath(CONFIG_PATH, "config.json")
-
 func PrivateConfigHandler(ctx *App, res http.ResponseWriter, req *http.Request) {
 	SendSuccessResult(res, &Config)
 }

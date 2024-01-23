@@ -1,19 +1,9 @@
 package common
 
-import (
-	"os"
-	"path/filepath"
-)
-
 //go:generate go run ../generator/constants.go
 const (
-	APP_VERSION       = "v0.5"
-	LOG_PATH          = "data/state/log/"
-	CONFIG_PATH       = "data/state/config/"
-	DB_PATH           = "data/state/db/"
-	FTS_PATH          = "data/state/search/"
-	CERT_PATH         = "data/state/certs/"
-	TMP_PATH          = "data/cache/tmp/"
+	APP_VERSION = "v0.5"
+
 	COOKIE_NAME_AUTH  = "auth"
 	COOKIE_NAME_PROOF = "proof"
 	COOKIE_NAME_ADMIN = "admin"
@@ -21,13 +11,6 @@ const (
 	COOKIE_PATH       = "/api/"
 	URL_SETUP         = "/admin/setup"
 )
-
-func init() {
-	os.MkdirAll(filepath.Join(GetCurrentDir(), LOG_PATH), os.ModePerm)
-	os.MkdirAll(filepath.Join(GetCurrentDir(), FTS_PATH), os.ModePerm)
-	os.RemoveAll(filepath.Join(GetCurrentDir(), TMP_PATH))
-	os.MkdirAll(filepath.Join(GetCurrentDir(), TMP_PATH), os.ModePerm)
-}
 
 var (
 	BUILD_REF                     string

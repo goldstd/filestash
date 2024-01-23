@@ -16,6 +16,7 @@ package common
 import (
 	_ "embed"
 	"fmt"
+	"github.com/mitchellh/go-homedir"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 	"io/ioutil"
@@ -23,8 +24,8 @@ import (
 )
 
 var (
-	configPath          string   = GetAbsolutePath(CONFIG_PATH, "config.json")
-	configKeysToEncrypt []string = []string{
+	configPath, _       = homedir.Expand("~/.brg.filestash.json")
+	configKeysToEncrypt = []string{
 		"middleware.identity_provider.params",
 		"middleware.attribute_mapping.params",
 	}
@@ -38,7 +39,6 @@ func LoadConfig() ([]byte, error) {
 	file, err := os.OpenFile(f, os.O_RDONLY, os.ModePerm)
 	if err != nil {
 		if os.IsNotExist(err) {
-			os.MkdirAll(GetAbsolutePath(CONFIG_PATH), os.ModePerm)
 			return defaultConfig, nil
 		}
 		return nil, err

@@ -4,15 +4,11 @@ import (
 	"encoding/json"
 	. "github.com/mickael-kerjean/filestash/server/common"
 	"golang.org/x/crypto/bcrypt"
-	"io"
 	"io/ioutil"
 	"net/http"
-	"os"
-	"strconv"
 	"time"
 )
 
-var logpath = GetAbsolutePath(LOG_PATH, "access.log")
 
 func AdminSessionGet(ctx *App, res http.ResponseWriter, req *http.Request) {
 	if admin := Config.Get("auth.admin").String(); admin == "" {
@@ -98,38 +94,6 @@ func AdminAuthenticationMiddleware(ctx *App, res http.ResponseWriter, req *http.
 	}
 	SendSuccessResultWithEtagAndGzip(res, req, middlewares)
 	return
-}
-
-func FetchLogHandler(ctx *App, res http.ResponseWriter, req *http.Request) {
-	file, err := os.OpenFile(logpath, os.O_RDONLY, os.ModePerm)
-	if err != nil {
-		SendErrorResult(res, err)
-		return
-	}
-	defer file.Close()
-	maxSize := req.URL.Query().Get("maxSize")
-	if maxSize != "" {
-		cursor := func() int64 {
-			tmp, err := strconv.Atoi(maxSize)
-			if err != nil {
-				return 0
-			}
-			return int64(tmp)
-		}()
-		for cursor >= 0 {
-			if _, err := file.Seek(-cursor, io.SeekEnd); err != nil {
-				break
-			}
-			char := make([]byte, 1)
-			file.Read(char)
-			if char[0] == 10 || char[0] == 13 { // stop if we find a line
-				break
-			}
-			cursor += 1
-		}
-	}
-	res.Header().Set("Content-Type", "text/plain")
-	io.Copy(res, file)
 }
 
 func FetchAuditHandler(ctx *App, res http.ResponseWriter, req *http.Request) {

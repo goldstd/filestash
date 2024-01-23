@@ -1,7 +1,7 @@
 package plugin
 
 import (
-	. "github.com/mickael-kerjean/filestash/server/common"
+	"github.com/mickael-kerjean/filestash/server/common"
 	_ "github.com/mickael-kerjean/filestash/server/plugin/plg_backend_sftp"
 	_ "github.com/mickael-kerjean/filestash/server/plugin/plg_image_ascii"
 	_ "github.com/mickael-kerjean/filestash/server/plugin/plg_image_transcode"
@@ -12,5 +12,5 @@ import (
 )
 
 func init() {
-	Log.Debug("Plugin loader")
+	common.Log.Debug("Plugin loader")
 }

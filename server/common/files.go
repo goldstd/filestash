@@ -5,25 +5,19 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/mitchellh/go-homedir"
 )
 
-var MOCK_CURRENT_DIR string
-
-func GetCurrentDir() string {
-	if MOCK_CURRENT_DIR != "" {
-		return MOCK_CURRENT_DIR
-	}
-	if os.Getenv("WORK_DIR") != "" {
-		return os.Getenv("WORK_DIR")
-	}
-	ex, _ := os.Executable()
-	return filepath.Dir(ex)
+func GetHomeDir() string {
+	home, _ := homedir.Dir()
+	return home
 }
 
 func GetAbsolutePath(base string, opts ...string) string {
 	fullPath := base
 	if strings.HasPrefix(base, "/") == false { // relative filepath are relative to the binary
-		fullPath = filepath.Join(GetCurrentDir(), base)
+		fullPath = filepath.Join(GetHomeDir(), base)
 	}
 	if len(opts) == 0 {
 		return fullPath

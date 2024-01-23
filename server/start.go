@@ -2,9 +2,11 @@ package routes
 
 import (
 	"fmt"
+	"net/http"
+
 	"github.com/gorilla/mux"
 	"github.com/mickael-kerjean/filestash/server/common"
-	"net/http"
+	_ "github.com/mickael-kerjean/filestash/server/plugin"
 )
 
 func Routers() *mux.Router {
