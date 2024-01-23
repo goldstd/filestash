@@ -3,10 +3,15 @@ package model
 import (
 	"fmt"
 	. "github.com/mickael-kerjean/filestash/server/common"
+	"github.com/mickael-kerjean/filestash/server/plugin/plg_backend_sftp"
 	"strings"
 )
 
 func NewBackend(ctx *App, conn map[string]string) (IBackend, error) {
+	return plg_backend_sftp.Sftp{}.Init(conn, ctx)
+}
+
+func NewBackend1(ctx *App, conn map[string]string) (IBackend, error) {
 	isAllowed := func() bool {
 		// by default, a hacker could use filestash to establish connections outside of what's
 		// define in the config file. We need to prevent this

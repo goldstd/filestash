@@ -2,247 +2,107 @@ package plg_backend_sftp
 
 import (
 	"io"
-	"net"
 	"os"
-	"regexp"
+	"path/filepath"
 	"strings"
-	"sync"
+	"time"
 
 	. "github.com/mickael-kerjean/filestash/server/common"
+	"github.com/patrickmn/go-cache"
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 )
 
-var SftpCache AppCache
-
 type Sftp struct {
 	SSHClient  *ssh.Client
 	SFTPClient *sftp.Client
-	wg         *sync.WaitGroup
 }
+
+// Cache is a cache with a default expiration time of 10 minutes, and which
+// purges expired items every 10 minutes
+var Cache = cache.New(10*time.Minute, 10*time.Minute)
 
 func init() {
 	Backend.Register("sftp", Sftp{})
 
-	SftpCache = NewAppCache()
-	SftpCache.OnEvict(func(key string, value interface{}) {
-		c := value.(*Sftp)
-		if c == nil {
-			Log.Warning("plg_backend_sftp::sftp is nil on close")
-			return
-		} else if c.wg == nil {
-			c.Close()
-			Log.Warning("plg_backend_sftp::wg is nil on close")
-			return
-		}
-		c.wg.Wait()
-		Log.Debug("plg_backend_sftp::vacuum")
+	Cache.OnEvicted(func(k string, v interface{}) {
+		s := v.(*Sftp)
+		s.Close()
+	})
+}
+
+func SetSSHClient(target string, client *ssh.Client) {
+	val, ok := Cache.Get(target)
+	if ok {
+		c := val.(*Sftp)
 		c.Close()
+	}
+
+	sftpClient, _ := sftp.NewClient(client)
+	Cache.SetDefault(target, &Sftp{
+		SSHClient:  client,
+		SFTPClient: sftpClient,
 	})
 }
 
 func (s Sftp) Init(params map[string]string, app *App) (IBackend, error) {
-	p := struct {
-		hostname   string
-		port       string
-		username   string
-		password   string
-		passphrase string
-	}{
-		params["hostname"],
-		params["port"],
-		params["username"],
-		params["password"],
-		params["passphrase"],
+	target := params["target"]
+	val, ok := Cache.Get(target)
+	if !ok {
+		return &Sftp{}, nil
 	}
-	if p.port == "" {
-		p.port = "22"
-	}
-
-	c := SftpCache.Get(params)
-	if c != nil {
-		d := c.(*Sftp)
-		if d == nil {
-			Log.Warning("plg_backend_sftp::sftp is nil on get")
-			return nil, ErrInternal
-		} else if d.wg == nil {
-			Log.Warning("plg_backend_sftp::wg is nil on get")
-			return nil, ErrInternal
-		}
-		d.wg.Add(1)
-		go func() {
-			<-app.Context.Done()
-			d.wg.Done()
-		}()
-		return d, nil
-	}
-
-	addr := p.hostname + ":" + p.port
-
-	keyStartMatcher := regexp.MustCompile(`^-----BEGIN [A-Z\ ]+-----`)
-	keyEndMatcher := regexp.MustCompile(`-----END [A-Z\ ]+-----$`)
-	keyContentMatcher := regexp.MustCompile(`^[a-zA-Z0-9\+\/\=\n]+$`)
-	isPrivateKey := func(pass string) bool {
-		p := strings.TrimSpace(pass)
-
-		// match private key beginning
-		if keyStartMatcher.FindStringIndex(p) == nil {
-			return false
-		}
-		p = keyStartMatcher.ReplaceAllString(p, "")
-		// match private key ending
-		if keyEndMatcher.FindStringIndex(p) == nil {
-			return false
-		}
-		p = keyEndMatcher.ReplaceAllString(p, "")
-		p = strings.Replace(p, " ", "", -1)
-		// match private key content
-		if keyContentMatcher.FindStringIndex(p) == nil {
-			return false
-		}
-		return true
-	}
-
-	restorePrivateKeyLineBreaks := func(pass string) string {
-		p := strings.TrimSpace(pass)
-
-		keyStartString := keyStartMatcher.FindString(p)
-		p = keyStartMatcher.ReplaceAllString(p, "")
-		keyEndString := keyEndMatcher.FindString(p)
-		p = keyEndMatcher.ReplaceAllString(p, "")
-		p = strings.Replace(p, " ", "", -1)
-		keyContentString := keyContentMatcher.FindString(p)
-
-		return keyStartString + "\n" + keyContentString + "\n" + keyEndString
-	}
-
-	/*
-	 * SSH has a range of authentication methods available: publickey, password,
-	 * keyboard-interactive, password-callback, publickey-callback, gss, .... Typical sftp
-	 * servers only have those 2: 'publickey' and 'password' but some exotic ones we've seen
-	 * have 'publickey' and 'keyboard-interactive'. If you're unlucky enough to have to work
-	 * with something else than those 3 we provide support for, either create a PR here
-	 * or contact us
-	 */
-	var auth []ssh.AuthMethod
-	if isPrivateKey(p.password) {
-		privateKey := restorePrivateKeyLineBreaks(p.password)
-		signer, err := func() (ssh.Signer, error) {
-			if p.passphrase == "" {
-				return ssh.ParsePrivateKey([]byte(privateKey))
-			}
-			return ssh.ParsePrivateKeyWithPassphrase([]byte(privateKey), []byte(p.passphrase))
-		}()
-		if err != nil {
-			return nil, err
-		}
-		auth = []ssh.AuthMethod{ssh.PublicKeys(signer)}
-	} else {
-		auth = []ssh.AuthMethod{
-			ssh.Password(p.password),
-			ssh.KeyboardInteractive(func(user, instruction string, questions []string, echos []bool) ([]string, error) {
-				answers := make([]string, len(questions))
-				for i, _ := range answers {
-					answers[i] = p.password
-				}
-				return answers, nil
-			}),
-		}
-	}
-
-	config := &ssh.ClientConfig{
-		User: p.username,
-		Auth: auth,
-		HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
-			if params["hostkey"] == "" {
-				return nil
-			}
-			fsha := ssh.FingerprintSHA256(key)
-			if fsha == params["hostkey"] {
-				return nil
-			}
-			fmd := ssh.FingerprintLegacyMD5(key)
-			if fmd == params["hostkey"] {
-				return nil
-			}
-			Log.Debug("plg_backend_sftp::fingerprint host key isn't correct on %s => '%s'", hostname, fsha)
-			return ErrNotValid
-		},
-	}
-
-	client, err := ssh.Dial("tcp", addr, config)
-	if err != nil {
-		config.User = strings.ToLower(p.username)
-		client, err = ssh.Dial("tcp", addr, config)
-		if err != nil {
-			return &s, ErrAuthenticationFailed
-		}
-	}
-	s.SSHClient = client
-
-	session, err := sftp.NewClient(s.SSHClient)
-	if err != nil {
-		return &s, err
-	}
-	s.SFTPClient = session
-	s.wg = new(sync.WaitGroup)
-	s.wg.Add(1)
-	go func() {
-		<-app.Context.Done()
-		s.wg.Done()
-	}()
-	SftpCache.Set(params, &s)
-	return &s, nil
+	Cache.SetDefault(target, val)
+	return val.(*Sftp), nil
 }
 
 func (b Sftp) LoginForm() Form {
 	return Form{
 		Elmnts: []FormElement{
-			FormElement{
+			{
 				Name:  "type",
 				Type:  "hidden",
 				Value: "sftp",
 			},
-			FormElement{
+			{
 				Name:        "hostname",
 				Type:        "text",
 				Placeholder: "Hostname*",
 			},
-			FormElement{
+			{
 				Name:        "username",
 				Type:        "text",
 				Placeholder: "Username",
 			},
-			FormElement{
+			{
 				Name:        "password",
 				Type:        "password",
 				Placeholder: "Password",
 			},
-			FormElement{
+			{
 				Name:        "advanced",
 				Type:        "enable",
 				Placeholder: "Advanced",
 				Target:      []string{"sftp_path", "sftp_port", "sftp_passphrase", "sftp_hostkey"},
 			},
-			FormElement{
+			{
 				Id:          "sftp_path",
 				Name:        "path",
 				Type:        "text",
 				Placeholder: "Path",
 			},
-			FormElement{
+			{
 				Id:          "sftp_port",
 				Name:        "port",
 				Type:        "number",
 				Placeholder: "Port",
 			},
-			FormElement{
+			{
 				Id:          "sftp_passphrase",
 				Name:        "passphrase",
 				Type:        "password",
 				Placeholder: "Passphrase",
 			},
-			FormElement{
+			{
 				Id:          "sftp_hostkey",
 				Name:        "hostkey",
 				Type:        "text",
@@ -257,10 +117,7 @@ func (b Sftp) Home() (string, error) {
 	if err != nil {
 		return "", b.err(err)
 	}
-	length := len(cwd)
-	if length > 0 && cwd[length-1:] != "/" {
-		return cwd + "/", nil
-	}
+	cwd = filepath.Join(cwd, "/")
 	return cwd, nil
 }
 
@@ -346,7 +203,9 @@ func (b Sftp) Stat(path string) (os.FileInfo, error) {
 
 func (b Sftp) Close() error {
 	err0 := b.SFTPClient.Close()
+	b.SFTPClient = nil
 	err1 := b.SSHClient.Close()
+	b.SSHClient = nil
 
 	if err0 != nil {
 		return err0

@@ -45,8 +45,7 @@ function encode_path(path) {
 
 export function prepare(path) {
     const p = new URLSearchParams(location.search);
-
-    return encodeURIComponent(decodeURIComponent(path.replace(/%/g, "%25")))  + "&target=" + p.get("target");;
+    return encodeURIComponent(decodeURIComponent(path.replace(/%/g, "%25"))) + "&target=" + p.get("target");
 }
 
 export function urlParams() {

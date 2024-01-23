@@ -241,8 +241,6 @@ func (this *Configuration) Load() {
 	}
 	this.cache.Clear()
 
-	Log.SetVisibility(this.Get("log.level").String())
-
 	go func() { // Trigger all the event listeners
 		for i := 0; i < len(this.onChange); i++ {
 			this.onChange[i].Listener <- nil

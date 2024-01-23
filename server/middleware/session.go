@@ -8,6 +8,7 @@ import (
 	"github.com/gorilla/mux"
 	. "github.com/mickael-kerjean/filestash/server/common"
 	"github.com/mickael-kerjean/filestash/server/model"
+	"github.com/mickael-kerjean/filestash/server/plugin/plg_backend_sftp"
 	"net/http"
 	"regexp"
 	"strings"
@@ -273,7 +274,7 @@ func _extractSession(req *http.Request, ctx *App) (map[string]string, error) {
 	var (
 		str     string
 		err     error
-		session map[string]string = make(map[string]string)
+		session = make(map[string]string)
 	)
 
 	if ctx.Share.Id != "" { // Shared link
@@ -325,5 +326,6 @@ func _extractSession(req *http.Request, ctx *App) (map[string]string, error) {
 }
 
 func _extractBackend(req *http.Request, ctx *App) (IBackend, error) {
-	return model.NewBackend(ctx, ctx.Session)
+	ctx.Session["target"] = req.URL.Query().Get("target")
+	return plg_backend_sftp.Sftp{}.Init(ctx.Session, ctx)
 }

@@ -1,0 +1,19 @@
+{
+    "general": {
+        "secret_key": "rY5fnAlgtmjdrxv1"
+    },
+    "auth": {
+        "admin": "$2a$10$v6HDzHe0T.NOOLa0t5sSn.7Q5gliZ5dyVHvbZXJWWjK0U41mdeD/m"
+    },
+    "constant": {
+        "user": "bingoo",
+        "emacs": false,
+        "pdftotext": true
+    },
+    "connections": [
+        {
+            "type": "sftp",
+            "label": "sftp"
+        }
+    ]
+}

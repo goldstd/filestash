@@ -17,7 +17,7 @@ function HomePageComponent({ error }) {
 
         Session.currentUser().then((res) => {
             if (res && res.is_authenticated === true) {
-                setRedirection((res.home ? `/files${res.home}` : "/files") + "?target=" + p.get("target"););
+                setRedirection((res.home ? `/files${res.home}` : "/files") + "?target=" + p.get("target"));
                 return;
             }
             setRedirection("/login");

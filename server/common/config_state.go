@@ -14,6 +14,7 @@ package common
  */
 
 import (
+	_ "embed"
 	"fmt"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
@@ -29,12 +30,16 @@ var (
 	}
 )
 
+//go:embed config.json
+var defaultConfig []byte
+
 func LoadConfig() ([]byte, error) {
-	file, err := os.OpenFile(configPath, os.O_RDONLY, os.ModePerm)
+	f := configPath
+	file, err := os.OpenFile(f, os.O_RDONLY, os.ModePerm)
 	if err != nil {
 		if os.IsNotExist(err) {
 			os.MkdirAll(GetAbsolutePath(CONFIG_PATH), os.ModePerm)
-			return []byte(""), nil
+			return defaultConfig, nil
 		}
 		return nil, err
 	}

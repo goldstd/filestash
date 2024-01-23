@@ -7,7 +7,7 @@ class SessionManager {
 
     currentUser() {
         const shareID = currentShare();
-        return http_get("/api/session" + (shareID && `?share=${shareID}`))
+        return http_get("/api/session?target=" + new URLSearchParams(location.search).get("target") + (shareID && `&share=${shareID}`))
             .then((data) => {
                 this.authorization = data.result.authorization;
                 return data.result;
@@ -41,7 +41,7 @@ class SessionManager {
     }
 
     authenticate(params) {
-        const url = "/api/session";
+        const url = "/api/session?target=" + new URLSearchParams(location.search).get("target");
         this.authorization = null;
         return http_post(url, params)
             .then((data) => data.result);
