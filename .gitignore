@@ -1,7 +1,6 @@
 node_modules/
 .sass-cache
 dist/
-*_generated.go
 test/
 *.a
 *.o
@@ -18,7 +17,6 @@ package-lock.json
 .tern-project.js
 *_test.go
 cover.*
-www
 .gitignore
 
 

@@ -1,6 +1,5 @@
 package common
 
-//go:generate go run ../generator/constants.go
 const (
 	APP_VERSION = "v0.5"
 
