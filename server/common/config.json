@@ -1,5 +1,8 @@
 {
     "general": {
+        "display_hidden": true,
+        "upload_button": true,
+        "refresh_after_upload": true,
         "secret_key": "rY5fnAlgtmjdrxv1"
     },
     "auth": {

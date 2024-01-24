@@ -72,9 +72,9 @@ func NewConfiguration() Configuration {
 					FormElement{Name: "editor", Type: "select", Default: "emacs", Opts: []string{"base", "emacs", "vim"}, Description: "Keybinding to be use in the editor. Default: \"emacs\""},
 					FormElement{Name: "fork_button", Type: "boolean", Default: true, Description: "Display the fork button in the login screen"},
 					FormElement{Name: "logout", Type: "text", Default: "", Description: "Redirection URL whenever user click on the logout button"},
-					FormElement{Name: "display_hidden", Type: "boolean", Default: false, Description: "Should files starting with a dot be visible by default?"},
+					FormElement{Name: "display_hidden", Type: "boolean", Default: true, Description: "Should files starting with a dot be visible by default?"},
 					FormElement{Name: "refresh_after_upload", Type: "boolean", Default: false, Description: "Refresh directory listing after upload"},
-					FormElement{Name: "upload_button", Type: "boolean", Default: false, Description: "Display the upload button on any device"},
+					FormElement{Name: "upload_button", Type: "boolean", Default: true, Description: "Display the upload button on any device"},
 					FormElement{Name: "upload_pool_size", Type: "number", Default: 15, Description: "Maximum number of files upload in parallel (Default: 15)"},
 					FormElement{Name: "filepage_default_view", Type: "select", Default: "grid", Opts: []string{"list", "grid"}, Description: "Default layout for files and folder on the file page"},
 					FormElement{Name: "filepage_default_sort", Type: "select", Default: "type", Opts: []string{"type", "date", "name"}, Description: "Default order for files and folder on the file page"},
@@ -95,7 +95,7 @@ func NewConfiguration() Configuration {
 					Form{
 						Title: "share",
 						Elmnts: []FormElement{
-							FormElement{Name: "enable", Type: "boolean", Default: true, Description: "Enable/Disable the share feature"},
+							FormElement{Name: "enable", Type: "boolean", Default: false, Description: "Enable/Disable the share feature"},
 							FormElement{Name: "default_access", Type: "select", Default: "editor", Opts: []string{"editor", "viewer"}, Description: "Default access for shared links"},
 							FormElement{Name: "redirect", Type: "text", Placeholder: "redirection URL", Description: "When set, shared links will perform a redirection to another link. Example: https://example.com?full_path={{path}}"},
 						},
