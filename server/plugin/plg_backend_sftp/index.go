@@ -1,71 +1,72 @@
 package plg_backend_sftp
 
 import (
-	"io"
-	"os"
-	"path/filepath"
-	"strings"
-	"time"
-
+	"fmt"
 	. "github.com/mickael-kerjean/filestash/server/common"
 	"github.com/patrickmn/go-cache"
 	"github.com/pkg/sftp"
 	"go.uber.org/multierr"
 	"golang.org/x/crypto/ssh"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
 )
 
 type Sftp struct {
 	SSHClient  *ssh.Client
 	SFTPClient *sftp.Client
-
-	ClientCreater func() (*ssh.Client, error)
 }
 
-// Cache is a cache with a default expiration time of 10 minutes, and which
-// purges expired items every 10 minutes
-var Cache = cache.New(10*time.Minute, 10*time.Minute)
+var (
+	// creatorCache  创建器缓存
+	creatorCache = cache.New(cache.NoExpiration, cache.NoExpiration)
+	sftpCache    = cache.New(10*time.Minute, 10*time.Minute)
+)
 
 func init() {
 	Backend.Register("sftp", Sftp{})
 
-	Cache.OnEvicted(func(k string, v interface{}) {
+	sftpCache.OnEvicted(func(k string, v interface{}) {
 		v.(*Sftp).Close()
 	})
 }
 
-func SetSSHClient(target string, clientCreater func() (*ssh.Client, error)) {
-	val, ok := Cache.Get(target)
-	if ok {
-		val.(*Sftp).ClientCreater = clientCreater
-	} else {
-		val = &Sftp{ClientCreater: clientCreater}
-	}
+type ClientCreator func() (*ssh.Client, error)
 
-	Cache.SetDefault(target, val)
+func SetCreator(target string, clientCreator ClientCreator) {
+	creatorCache.SetDefault(target, clientCreator)
 }
 
 func (s Sftp) Init(params map[string]string, app *App) (IBackend, error) {
 	target := params["target"]
-	val, ok := Cache.Get(target)
+	val, ok := sftpCache.Get(target)
 	if !ok {
-		return &Sftp{}, nil
-	}
+		creator, ok := creatorCache.Get(target)
+		if !ok {
+			return nil, fmt.Errorf("unknown target %s", target)
+		}
 
-	vs := val.(*Sftp)
-	if vs.SFTPClient == nil {
-		var err error
-		vs.SSHClient, err = vs.ClientCreater()
+		sshClient, err := creator.(ClientCreator)()
 		if err != nil {
 			return nil, err
 		}
-		vs.SFTPClient, err = sftp.NewClient(vs.SSHClient)
+		sftpClient, err := sftp.NewClient(sshClient)
 		if err != nil {
 			return nil, err
 		}
-	}
 
-	Cache.SetDefault(target, val)
-	return vs, nil
+		val = &Sftp{
+			SSHClient:  sshClient,
+			SFTPClient: sftpClient,
+		}
+
+	}
+	// 重新设置，续期
+	sftpCache.SetDefault(target, val)
+
+	return val.(*Sftp), nil
 }
 
 func (b Sftp) LoginForm() Form {
