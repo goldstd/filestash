@@ -10,12 +10,15 @@ import (
 	. "github.com/mickael-kerjean/filestash/server/common"
 	"github.com/patrickmn/go-cache"
 	"github.com/pkg/sftp"
+	"go.uber.org/multierr"
 	"golang.org/x/crypto/ssh"
 )
 
 type Sftp struct {
 	SSHClient  *ssh.Client
 	SFTPClient *sftp.Client
+
+	ClientCreater func() (*ssh.Client, error)
 }
 
 // Cache is a cache with a default expiration time of 10 minutes, and which
@@ -26,23 +29,19 @@ func init() {
 	Backend.Register("sftp", Sftp{})
 
 	Cache.OnEvicted(func(k string, v interface{}) {
-		s := v.(*Sftp)
-		s.Close()
+		v.(*Sftp).Close()
 	})
 }
 
-func SetSSHClient(target string, client *ssh.Client) {
+func SetSSHClient(target string, clientCreater func() (*ssh.Client, error)) {
 	val, ok := Cache.Get(target)
 	if ok {
-		c := val.(*Sftp)
-		c.Close()
+		val.(*Sftp).ClientCreater = clientCreater
+	} else {
+		val = &Sftp{ClientCreater: clientCreater}
 	}
 
-	sftpClient, _ := sftp.NewClient(client)
-	Cache.SetDefault(target, &Sftp{
-		SSHClient:  client,
-		SFTPClient: sftpClient,
-	})
+	Cache.SetDefault(target, val)
 }
 
 func (s Sftp) Init(params map[string]string, app *App) (IBackend, error) {
@@ -51,8 +50,22 @@ func (s Sftp) Init(params map[string]string, app *App) (IBackend, error) {
 	if !ok {
 		return &Sftp{}, nil
 	}
+
+	vs := val.(*Sftp)
+	if vs.SFTPClient == nil {
+		var err error
+		vs.SSHClient, err = vs.ClientCreater()
+		if err != nil {
+			return nil, err
+		}
+		vs.SFTPClient, err = sftp.NewClient(vs.SSHClient)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	Cache.SetDefault(target, val)
-	return val.(*Sftp), nil
+	return vs, nil
 }
 
 func (b Sftp) LoginForm() Form {
@@ -207,10 +220,7 @@ func (b Sftp) Close() error {
 	err1 := b.SSHClient.Close()
 	b.SSHClient = nil
 
-	if err0 != nil {
-		return err0
-	}
-	return err1
+	return multierr.Combine(err0, err1)
 }
 
 func (b Sftp) err(e error) error {
