@@ -41,7 +41,7 @@ self.addEventListener("install", function() {
     caches.open(CACHE_NAME).then(function(cache) {
         return cache.addAll([
             "/",
-            "/api/config",
+            "/api/config?target=" + new URLSearchParams(location.search).get("target"),
         ]);
     });
 

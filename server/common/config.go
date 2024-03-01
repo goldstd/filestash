@@ -343,27 +343,29 @@ func (this *Configuration) Save() {
 	}
 }
 
-func (this *Configuration) Export() interface{} {
-	return struct {
-		Editor                  string            `json:"editor"`
-		ForkButton              bool              `json:"fork_button"`
-		DisplayHidden           bool              `json:"display_hidden"`
-		Name                    string            `json:"name"`
-		UploadButton            bool              `json:"upload_button"`
-		Connections             interface{}       `json:"connections"`
-		EnableShare             bool              `json:"enable_share"`
-		SharedLinkDefaultAccess string            `json:"share_default_access"`
-		SharedLinkRedirect      string            `json:"share_redirect"`
-		Logout                  string            `json:"logout"`
-		MimeTypes               map[string]string `json:"mime"`
-		UploadPoolSize          int               `json:"upload_pool_size"`
-		RefreshAfterUpload      bool              `json:"refresh_after_upload"`
-		FilePageDefaultSort     string            `json:"default_sort"`
-		FilePageDefaultView     string            `json:"default_view"`
-		AuthMiddleware          []string          `json:"auth"`
-		Thumbnailer             []string          `json:"thumbnailer"`
-		EnableChromecast        bool              `json:"enable_chromecast"`
-	}{
+type ConfigurationExport struct {
+	Editor                  string            `json:"editor"`
+	ForkButton              bool              `json:"fork_button"`
+	DisplayHidden           bool              `json:"display_hidden"`
+	Name                    string            `json:"name"`
+	UploadButton            bool              `json:"upload_button"`
+	Connections             interface{}       `json:"connections"`
+	EnableShare             bool              `json:"enable_share"`
+	SharedLinkDefaultAccess string            `json:"share_default_access"`
+	SharedLinkRedirect      string            `json:"share_redirect"`
+	Logout                  string            `json:"logout"`
+	MimeTypes               map[string]string `json:"mime"`
+	UploadPoolSize          int               `json:"upload_pool_size"`
+	RefreshAfterUpload      bool              `json:"refresh_after_upload"`
+	FilePageDefaultSort     string            `json:"default_sort"`
+	FilePageDefaultView     string            `json:"default_view"`
+	AuthMiddleware          []string          `json:"auth"`
+	Thumbnailer             []string          `json:"thumbnailer"`
+	EnableChromecast        bool              `json:"enable_chromecast"`
+}
+
+func (this *Configuration) Export() ConfigurationExport {
+	return ConfigurationExport{
 		Editor:                  this.Get("general.editor").String(),
 		ForkButton:              this.Get("general.fork_button").Bool(),
 		DisplayHidden:           this.Get("general.display_hidden").Bool(),

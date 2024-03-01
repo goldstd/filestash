@@ -5,11 +5,11 @@ class ConfigModel {
     }
 
     all() {
-        return http_get("/admin/api/config").then((d) => d.result);
+        return http_get("/admin/api/config?target=" + new URLSearchParams(location.search).get("target")).then((d) => d.result);
     }
 
     save(config, debounced = true, fn_ok, fn_err) {
-        const url = "/admin/api/config";
+        const url = "/admin/api/config?target=" + new URLSearchParams(location.search).get("target");
 
         if (debounced) {
             if (!this.debounced_post) {
@@ -35,7 +35,7 @@ class ConfigModel {
     }
 
     refresh() {
-        return http_get("/api/config").then((config) => {
+        return http_get("/api/config?target=" + new URLSearchParams(location.search).get("target")).then((config) => {
             window.CONFIG = config.result;
         });
     }

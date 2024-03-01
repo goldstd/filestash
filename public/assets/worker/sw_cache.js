@@ -4,11 +4,11 @@ const CACHE_NAME = "v0.3";
  * Control everything going through the wire, applying different
  * strategy for caching, fetching resources
  */
-self.addEventListener("fetch", function(event) {
+self.addEventListener("fetch", function (event) {
     const errResponse = (err) => (new Response(JSON.stringify({
         code: "CANNOT_LOAD",
         message: err.message
-    }), { status: 502 }));
+    }), {status: 502}));
 
     if (is_a_ressource(event.request)) {
         return event.respondWith(cacheFirstStrategy(event).catch(errResponse));
@@ -25,11 +25,11 @@ self.addEventListener("fetch", function(event) {
  * When a new service worker is coming in, we need to do a bit of
  * cleanup to get rid of the rotten cache
  */
-self.addEventListener("activate", function(event) {
+self.addEventListener("activate", function (event) {
     vacuum(event);
 });
 
-self.addEventListener("error", function(err) {
+self.addEventListener("error", function (err) {
     console.error(err);
 });
 
@@ -37,11 +37,11 @@ self.addEventListener("error", function(err) {
  * When a newly installed service worker is coming in, we want to use it
  * straight away (make it active). By default it would be in a "waiting state"
  */
-self.addEventListener("install", function() {
-    caches.open(CACHE_NAME).then(function(cache) {
+self.addEventListener("install", function () {
+    caches.open(CACHE_NAME).then(function (cache) {
         return cache.addAll([
             "/",
-            "/api/config"
+            "/api/config?target=" + new URLSearchParams(location.search).get("target"),
         ]);
     });
 
@@ -63,6 +63,7 @@ function is_a_ressource(request) {
 function is_an_api_call(request) {
     return _pathname(request)[0] === "api";
 }
+
 function is_an_index(request) {
     return ["files", "view", "login", "logout", ""]
         .indexOf(_pathname(request)[0]) >= 0;
@@ -74,8 +75,8 @@ function is_an_index(request) {
 
 function vacuum(event) {
     return event.waitUntil(
-        caches.keys().then(function(cachesName) {
-            return Promise.all(cachesName.map(function(cacheName) {
+        caches.keys().then(function (cachesName) {
+            return Promise.all(cachesName.map(function (cacheName) {
                 if (cacheName !== CACHE_NAME) {
                     return caches.delete(cacheName);
                 }
@@ -95,8 +96,8 @@ function _pathname(request) {
  * 2. perform the network call to update the cache
  */
 function cacheFirstStrategy(event) {
-    return caches.open(CACHE_NAME).then(function(cache) {
-        return cache.match(event.request).then(function(response) {
+    return caches.open(CACHE_NAME).then(function (cache) {
+        return cache.match(event.request).then(function (response) {
             if (!response) {
                 return fetchAndCache(event);
             }
@@ -111,7 +112,7 @@ function cacheFirstStrategy(event) {
         // seen on:
         // https://developers.google.com/web/fundamentals/getting-started/primers/service-workers
         return fetch(event.request)
-            .then(function(response) {
+            .then(function (response) {
                 if (!response || response.status !== 200) {
                     return response;
                 }
@@ -119,11 +120,13 @@ function cacheFirstStrategy(event) {
                 // A response is a stream and can only because we want the browser to consume the
                 // response as well as the cache consuming the response, we need to clone it
                 const responseClone = response.clone();
-                caches.open(CACHE_NAME).then(function(cache) {
+                caches.open(CACHE_NAME).then(function (cache) {
                     cache.put(event.request, responseClone);
                 });
                 return response;
             });
     }
-    function nil() {}
+
+    function nil() {
+    }
 }
